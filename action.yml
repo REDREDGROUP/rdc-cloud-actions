@@ -1,0 +1,50 @@
+name: Setup RDC Cloud CLI
+description: Install the RDC Cloud CLI (rdc) and add it to PATH.
+author: REDREDGROUP
+branding:
+  icon: terminal
+  color: red
+
+inputs:
+  version:
+    description: CLI version to install, such as `0.0.4`. Defaults to the latest release.
+    required: false
+    default: latest
+  node-version:
+    description: Node.js version used to run the CLI. Must satisfy the CLI's supported range.
+    required: false
+    default: '24'
+
+outputs:
+  version:
+    description: Installed CLI version.
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install rdc
+      id: install
+      shell: bash
+      env:
+        RDC_CLI_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+
+        if [[ ! "$RDC_CLI_VERSION" =~ ^(latest|[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+          echo "::error title=Invalid version::Use 'latest' or an exact version such as 0.0.4."
+          exit 1
+        fi
+
+        npm install --global --ignore-scripts --no-audit --no-fund \
+          --@redredgroup:registry=https://registry.npmjs.org/ \
+          "@redredgroup/rdc-cli@${RDC_CLI_VERSION}"
+
+        installed="$(rdc --version)"
+        echo "Installed rdc ${installed}"
+        echo "version=${installed}" >> "$GITHUB_OUTPUT"
